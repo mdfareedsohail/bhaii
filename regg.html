@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Registration System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+        body { 
+            font-family: 'Roboto', sans-serif; 
+        }
+        /* Define reusable components using @apply */
+        .container-main {
+            @apply mx-auto p-6 bg-white rounded-xl shadow-2xl w-full max-w-4xl;
+        }
+        .form-container {
+            @apply max-w-sm mx-auto space-y-4;
+        }
+        .form-input {
+            @apply w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        .btn {
+            @apply w-full text-white py-3 rounded-lg font-semibold transition-colors;
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700;
+        }
+        .btn-secondary {
+            @apply bg-green-600 hover:bg-green-700;
+        }
+        .btn-danger {
+            @apply bg-red-500 hover:bg-red-600 px-6 py-2;
+        }
+        .link {
+            @apply text-blue-600 hover:underline;
+        }
+        .card {
+            @apply bg-gray-50 p-6 rounded-lg shadow-md;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="container-main">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-blue-700">Railway Booking System 🚂</h1>
+            <p class="text-gray-500">Your journey starts here.</p>
+        </header>
+
+        <div id="auth-container">
+            <div id="login-form">
+                <form id="login" class="form-container">
+                    <h2 class="text-2xl font-semibold text-center">Login</h2>
+                    <input type="email" id="login-email" placeholder="Email" required class="form-input">
+                    <input type="password" id="login-password" placeholder="Password" required class="form-input">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <p class="text-center">Don't have an account? <a href="#" id="show-signup" class="link">Sign Up</a></p>
+                </form>
+            </div>
+            <div id="signup-form" class="hidden">
+                <form id="signup" class="form-container">
+                    <h2 class="text-2xl font-semibold text-center">Create an Account</h2>
+                    <input type="text" id="signup-name" placeholder="Full Name" required class="form-input">
+                    <input type="email" id="signup-email" placeholder="Email" required class="form-input">
+                    <input type="password" id="signup-password" placeholder="Password" required class="form-input">
+                    <button type="submit" class="btn btn-secondary">Sign Up</button>
+                    <p class="text-center">Already have an account? <a href="#" id="show-login" class="link">Login</a></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="app-container" class="hidden">
+            <div class="flex justify-between items-center mb-8 border-b pb-4">
+                <div>
+                    <h2 class="text-3xl font-bold">Welcome, <span id="user-name" class="text-blue-700"></span>!</h2>
+                    <p class="text-gray-500" id="user-email"></p>
+                </div>
+                <button id="logout-button" class="btn btn-danger">Logout</button>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="card">
+                    <h3 class="text-2xl font-semibold mb-4">Book a Ticket</h3>
+                    <form id="booking-form" class="space-y-4">
+                        <input type="text" id="source" placeholder="Source Station" required class="form-input">
+                        <input type="text" id="destination" placeholder="Destination Station" required class="form-input">
+                        <input type="date" id="date" required class="form-input">
+                        <button type="submit" class="btn btn-primary">Book Now</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3 class="text-2xl font-semibold mb-4">Your Booked Tickets</h3>
+                    <div id="tickets-list" class="space-y-3">
+                        <p class="text-gray-500">You have no booked tickets yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>
+        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // ===================================================================================
+        // ALL THE JAVASCRIPT LOGIC FROM THE PREVIOUS EXAMPLE GOES HERE.
+        // It does not need to be changed. Just copy and paste it.
+        // ===================================================================================
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const showSignupLink = document.getElementById('show-signup');
+        const showLoginLink = document.getElementById('show-login');
+        const logoutButton = document.getElementById('logout-button');
+        const bookingForm = document.getElementById('booking-form');
+        const ticketsList = document.getElementById('tickets-list');
+        const userNameDisplay = document.getElementById('user-name');
+        const userEmailDisplay = document.getElementById('user-email');
+
+        // Toggle between Login and Signup forms
+        showSignupLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.add('hidden');
+            signupForm.classList.remove('hidden');
+        });
+
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            signupForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // Authentication State Observer
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                fetchUserData(user);
+                fetchUserTickets(user.uid);
+            } else {
+                // User is signed out
+                appContainer.classList.add('hidden');
+                authContainer.classList.remove('hidden');
+            }
+        });
+
+        // Fetch User Data
+        async function fetchUserData(user) {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                userNameDisplay.textContent = userData.name;
+                userEmailDisplay.textContent = user.email;
+            }
+        }
+
+        // Signup Handler
+        document.getElementById('signup').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        name: name,
+                        email: email
+                    });
+                })
+                .then(() => {
+                    alert('Registration successful! You are now logged in.');
+                    document.getElementById('signup').reset();
+                })
+                .catch((error) => {
+                    alert(`Error: ${error.message}`);
+                });
+        });
+
+        // Login Handler
+        document.getElementById('login').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById('login').reset();
+                })
+                .catch((error) => {
+                    alert(`Error: ${error.message}`);
+                });
+        });
+
+        // Logout Handler
+        logoutButton.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                alert('You have been logged out.');
+            });
+        });
+        
+        // Ticket Booking Handler
+        bookingForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const source = document.getElementById('source').value;
+            const destination = document.getElementById('destination').value;
+            const date = document.getElementById('date').value;
+            const user = auth.currentUser;
+
+            if (user) {
+                db.collection('tickets').add({
+                    userId: user.uid,
+                    source: source,
+                    destination: destination,
+                    date: date,
+                    bookedAt: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .then(() => {
+                    alert('Ticket booked successfully!');
+                    bookingForm.reset();
+                })
+                .catch((error) => {
+                    alert(`Error booking ticket: ${error.message}`);
+                });
+            }
+        });
+
+        // Fetch and Display Tickets
+        function fetchUserTickets(userId) {
+            db.collection('tickets')
+              .where('userId', '==', userId)
+              .orderBy('bookedAt', 'desc')
+              .onSnapshot(snapshot => {
+                  ticketsList.innerHTML = '';
+                  if (snapshot.empty) {
+                      ticketsList.innerHTML = '<p class="text-gray-500">You have no booked tickets yet.</p>';
+                      return;
+                  }
+                  snapshot.forEach(doc => {
+                      const ticket = doc.data();
+                      const ticketElement = document.createElement('div');
+                      ticketElement.className = 'bg-white p-4 rounded-lg border';
+                      ticketElement.innerHTML = `
+                          <p class="font-bold text-lg">${ticket.source} &rarr; ${ticket.destination}</p>
+                          <p class="text-gray-600">Date: ${ticket.date}</p>
+                      `;
+                      ticketsList.appendChild(ticketElement);
+                  });
+              });
+        }
+    </script>
+</body>
+</html>
